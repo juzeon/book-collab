@@ -15,5 +15,13 @@ const db = mysql.createPool({
     queueLimit: 0
 }).promise()
 
+export function getLineIndent(line: string) {
+    return /^\s*/.exec(line)![0]
+}
+
+export function isTitleWithSignifier(line: string) {
+    return (/第+/.test(line) || /章+/.test(line) || /回+/.test(line) || /幕+/.test(line)
+        || /[1-9]+/.test(line) || /[一二三四五六七八九十]+/.test(line)) && line.length <= appConfig.maxTitleWordcount
+}
 
 export {logger, db}
