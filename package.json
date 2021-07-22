@@ -19,7 +19,7 @@
     "express": "^4.17.1",
     "iconv-lite": "^0.4.24",
     "log4js": "^6.3.0",
-    "mysql2": "^2.2.5",
+    "promise-mysql": "^5.0.3",
     "reflect-metadata": "^0.1.13",
     "typedi": "^0.10.0"
   },

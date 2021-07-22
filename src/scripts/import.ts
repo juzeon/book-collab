@@ -1,5 +1,5 @@
 import {program} from 'commander'
-import {getLineIndent, isTitleWithSignifier, logger} from "../includes"
+import {db, getLineIndent, getPoolCreatingPromise, isTitleWithSignifier, logger} from "../includes"
 import * as fs from "fs"
 import chardet from 'chardet'
 import iconv from 'iconv-lite'
@@ -19,6 +19,7 @@ const options = {
 logger.debug(options)
 
 async function script() {
+    await getPoolCreatingPromise()
     if (fs.existsSync(options.file) && fs.statSync(options.file).isFile()) {
         let filePath = options.file
         await importFromFile(filePath)
@@ -26,7 +27,7 @@ async function script() {
         let dir = fs.readdirSync(options.directory)
         for (let file of dir) {
             let filePath = path.join(options.directory, file)
-            importFromFile(filePath)
+            await importFromFile(filePath)
         }
     }
 }
@@ -34,6 +35,8 @@ async function script() {
 script()
 
 async function importFromFile(filePath: string) {
+    let bookTitle = path.parse(filePath).name
+    logger.debug('开始处理： ' + bookTitle)
     let contentBuffer = Buffer.from(fs.readFileSync(filePath))
     let encoding = chardet.detect(contentBuffer)
     let content: string
@@ -45,9 +48,10 @@ async function importFromFile(filePath: string) {
     }
 
     // 预处理
-    let contentArr = content.replace(/[　 ]/g, ' ')
+    content = content.replace(/[　 ]/g, ' ')
         .replace(/\r/g, '')
-        .split('\n')
+    let bookWordcount = content.replace(/\s/g, '').length
+    let contentArr = content.split('\n')
     contentArr = contentArr.filter(value => value.trim().length != 0)
 
     // 计算indent数量统计表
@@ -71,9 +75,8 @@ async function importFromFile(filePath: string) {
     }
 
     // 计算字数与段落数之比
-    // 好像没啥用
-    let wordParaRatio = content.replace(/\s/, '').length / mostIndentCount
-    logger.debug('Ratio: '+wordParaRatio)
+    let wordParaRatio = bookWordcount / mostIndentCount
+    logger.debug('Ratio: ' + wordParaRatio)
 
     // 判断是否要用第x章这种格式提取标题
     let titleWithSignifierCount = 0
@@ -90,6 +93,15 @@ async function importFromFile(filePath: string) {
     if (titleWithSignifierCount >= appConfig.titleSignifierCount || indentMap.size <= 1) {
         useTitleWithSignifier = true
     }
-    logger.debug(filePath + ' ' + useTitleWithSignifier)
+    logger.debug('useTitleWithSignifier: ' + useTitleWithSignifier)
+
+    // 录入数据库
+    if (!(await db.query('select id from novels where title=?', [bookTitle])).length) {
+        await db.query('insert into novels (title,intro,wordcount,time) values(?,?,?,?)', [
+            bookTitle, content.slice(0, 300), bookWordcount, Math.floor(Date.now() / 1000)
+        ])
+    }
+
+
     logger.debug('---------')
 }

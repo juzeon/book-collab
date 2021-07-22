@@ -1,19 +1,27 @@
 import {configure, getLogger} from "log4js"
-import mysql from 'mysql2'
+import mysql, {Pool} from 'promise-mysql'
 import {appConfig} from "./config"
 
 const logger = getLogger()
 logger.level = "debug"
 
-const db = mysql.createPool({
+let db: Pool
+let poolCreatingPromise = mysql.createPool({
     host: appConfig.dbHost,
     user: appConfig.dbUser,
     password: appConfig.dbPassword,
-    database: appConfig.dbName,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-}).promise()
+    database: appConfig.dbName
+}).then(value => {
+    db = value
+    logger.info('Pool created.')
+}).catch(error => {
+    logger.error(error)
+})
+
+// 用于阻塞直到pool创建完毕
+export function getPoolCreatingPromise() {
+    return poolCreatingPromise
+}
 
 export function getLineIndent(line: string) {
     return /^\s*/.exec(line)![0]
