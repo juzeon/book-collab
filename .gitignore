@@ -5,3 +5,4 @@ build/*
 test/*
 log.log
 repo/*
+/package-lock.json
