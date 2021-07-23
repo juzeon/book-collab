@@ -42,7 +42,7 @@ async function script() {
         let filePath = options.file
         await importFromFile(filePath)
     } else {
-        let files = await glob.promise(path.join(options.file, '**/*'))
+        let files = await glob.promise(path.join(options.file, '**/*.txt'))
         for (let filePath of files) {
             if (fs.statSync(filePath).isFile()) {
                 await importFromFile(filePath)
@@ -58,8 +58,8 @@ async function importFromFile(filePath: string) {
     let bookTitle = path.parse(filePath).name
     let novelIdOrNull = await novelModel.findNovelByTitle(bookTitle)
     if (novelIdOrNull && !options.overwrite) {
-        logger.debug('跳过：' + bookTitle)
-        logger.debug('------')
+        // logger.debug('跳过：' + bookTitle)
+        // logger.debug('------')
         return
     }
     logger.debug('开始处理：' + bookTitle)

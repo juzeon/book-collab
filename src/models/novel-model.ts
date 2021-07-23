@@ -10,7 +10,7 @@ export class NovelModel {
 
     async insertNovels(novels: INovel[]) {
         return db.query('insert into novels (title,intro,wordcount,time) values ?', [
-            novels.map(novel => [novel.title, novel.intro, novel.wordcount, novel.title])
+            novels.map(novel => [novel.title, novel.intro, novel.wordcount, novel.time])
         ])
     }
 

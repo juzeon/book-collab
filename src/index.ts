@@ -7,7 +7,7 @@ import {appConfig} from "./config"
 
 const app = express()
 
-app.use(novelRouter)
+app.use('/novel',novelRouter)
 
 async function entrypoint(){
     await getPoolCreatingPromise()
