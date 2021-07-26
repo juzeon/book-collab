@@ -3,6 +3,8 @@ import mysql, {Pool} from 'promise-mysql'
 import {appConfig} from "./config"
 import * as fs from "fs"
 import * as path from "path"
+import express from "express"
+import {validationResult} from "express-validator"
 
 const logger = getLogger()
 logger.level = "debug"
@@ -30,8 +32,8 @@ export function getLineIndent(line: string) {
 }
 
 export function isTitleWithSignifier(line: string) {
-    return line.trim().length <= appConfig.maxTitleWordcount && (
-        /[1-9一二三四五六七八九十]+(章|回|幕|话|\.|、|:|：|-)+/.test(line)
+    return line.replace(/\s*/g, '').length <= appConfig.maxTitleWordcount && (
+        /[1-9一二三四五六七八九十]+(章|回|幕|话|节|\.|、|:|：|-|，)+/.test(line)
         || /番外/.test(line)
         || /特别篇/.test(line)
     )
@@ -43,6 +45,31 @@ export function tagsToArray(str: string): string[] {
 
 export function arrayToTags(arr: string[]): string {
     return arr.join(',')
+}
+
+export let resultJson = {
+    success(data: any) {
+        return {
+            status: true,
+            data: data
+        }
+    },
+    error(data: any) {
+        return {
+            status: false,
+            data: data
+        }
+    }
+}
+
+export function hasValidationErrors(req: express.Request, res: express.Response) {
+    let validationRes = validationResult(req)
+    if (validationRes.isEmpty()) {
+        return false
+    } else {
+        res.json(resultJson.error(validationRes.array()))
+        return true
+    }
 }
 
 export {logger, db}

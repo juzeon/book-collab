@@ -6,3 +6,4 @@ test/*
 log.log
 repo/*
 /package-lock.json
+pnpm-lock.yaml
