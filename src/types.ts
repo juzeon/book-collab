@@ -12,5 +12,6 @@ export interface INovel {
     title: string,
     intro: string,
     wordcount: number,
-    time: number
+    time: number,
+    tags?: string
 }

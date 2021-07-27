@@ -1,6 +1,8 @@
+import 'reflect-metadata'
 import {Service} from "typedi"
-import {db} from "../includes"
+import {db, getNovelWithTagsSqlSegment, pageToLimitSqlSegment} from "../includes"
 import {IChapter, INovel} from "../types"
+import {fillIChapter, fillINovel} from "../entity-fill"
 
 @Service()
 export class NovelModel {
@@ -22,5 +24,34 @@ export class NovelModel {
 
     async deleteChaptersByNovelId(novelId: number) {
         return db.query('delete from chapters where novelId=?', [novelId])
+    }
+
+    async getNovels(page: number) {
+        let novels = await db.query(getNovelWithTagsSqlSegment('time', 'desc')
+            + pageToLimitSqlSegment(page))
+        return novels.map((novel: any) => fillINovel(novel))
+    }
+
+    async getTocByNovelId(novelId: number) {
+        let arr = await db.query('select orderId,title,wordcount from chapters where novelId=? order by orderId asc',
+            [novelId])
+        return arr
+    }
+
+    async findNovelById(id: number) {
+        let arr = await db.query(getNovelWithTagsSqlSegment('time', 'desc', 'where n.id=?'),
+            [id])
+        if (!arr.length) {
+            return null
+        }
+        return fillINovel(arr[0])
+    }
+
+    async findChapterByNovelIdOrderId(novelId: number, orderId: number) {
+        let arr = await db.query('select * from chapters where novelId=? and orderId=?', [novelId, orderId])
+        if (!arr.length) {
+            return null
+        }
+        return fillIChapter(arr[0])
     }
 }

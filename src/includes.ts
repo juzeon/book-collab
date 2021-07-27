@@ -1,10 +1,13 @@
+import 'reflect-metadata'
 import {configure, getLogger} from "log4js"
 import mysql, {Pool} from 'promise-mysql'
 import {appConfig} from "./config"
 import * as fs from "fs"
 import * as path from "path"
 import express from "express"
-import {validationResult} from "express-validator"
+import {CustomValidator, Meta, validationResult} from "express-validator"
+import {Container} from "typedi"
+import {NovelModel} from "./models/novel-model"
 
 const logger = getLogger()
 logger.level = "debug"
@@ -70,6 +73,31 @@ export function hasValidationErrors(req: express.Request, res: express.Response)
         res.json(resultJson.error(validationRes.array()))
         return true
     }
+}
+
+export function pageToLimitSqlSegment(page: number) {
+    return ' limit ' + (page - 1) * appConfig.perPage + ',' + appConfig.perPage
+}
+
+export function getNovelWithTagsSqlSegment(orderBy: string, orderByType: 'asc' | 'desc', novelTableConditions: string = '') {
+    return 'select n.*,group_concat(t.name) as tags ' +
+        'from novels n ' +
+        'left join tagmap tm on tm.novelId=n.id ' +
+        'left join tags t on t.id=tm.tagId ' +
+        novelTableConditions + ' ' +
+        'group by n.id ' +
+        'order by n.' + orderBy + ' ' + orderByType + ' '
+}
+
+// 有将INovel导入到req.params
+export let novelExistValidator: CustomValidator = async (novelId: number, {req}) => {
+    let novelModel = Container.get(NovelModel)
+    let novel = await novelModel.findNovelById(novelId)
+    if (!novel) {
+        throw new Error('novelId不存在')
+    }
+    req.params!.novel = novel
+    return true
 }
 
 export {logger, db}
