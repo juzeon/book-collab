@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev:import": "ts-node src/scripts/import.ts",
     "import": "node build/scripts/import.js",
-    "test:single": "ts-node src/test/single.ts"
+    "test:single": "ts-node src/test/single.ts",
+    "build": "tsc"
   },
   "keywords": [],
   "author": "",
