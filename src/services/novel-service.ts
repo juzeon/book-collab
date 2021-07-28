@@ -16,11 +16,11 @@ export class NovelService {
 
     async novelInfo(novel: INovel) {
         let toc = await this.novelModel.getTocByNovelId(novel.id!)
-        return resultJson.success({novel, toc})
+        return resultJson.success({meta: novel, toc: toc})
     }
 
     async chapter(novelId: number, orderId: number) {
-        let chapter=await this.novelModel.findChapterByNovelIdOrderId(novelId, orderId)
+        let chapter = await this.novelModel.findChapterByNovelIdOrderId(novelId, orderId)
         return resultJson.success(chapter)
     }
 }
