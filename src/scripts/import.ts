@@ -18,13 +18,15 @@ program
     .option('-t, --tags <tags>', '打标签，中间使用逗号分隔。例如：A,B,C', false)
     .option('-o, --overwrite', '覆盖已经有存在标题的小说', false)
     .option('-i, --indent', '强制使用indent分章节', false)
+    .option('-d, --documentalize', '将数据录入NoSQL', false)
 program.parse()
 const options = {
     file: program.opts().file,
     recursive: program.opts().recursive,
     tags: program.opts().tags,
     overwrite: program.opts().overwrite,
-    indent: program.opts().indent
+    indent: program.opts().indent,
+    documentalize: program.opts().documentalize
 }
 logger.debug(options)
 
@@ -61,15 +63,7 @@ async function script() {
 
 script()
 
-async function importFromFile(filePath: string) {
-    let bookTitle = path.parse(filePath).name
-    let novelIdOrNull = await novelModel.findNovelByTitle(bookTitle)
-    if (novelIdOrNull && !options.overwrite) {
-        // logger.debug('跳过：' + bookTitle)
-        // logger.debug('------')
-        return
-    }
-    logger.debug('开始处理：' + bookTitle)
+function readFileToContent(filePath: string) {
     let contentBuffer = Buffer.from(fs.readFileSync(filePath))
     let encoding = chardet.detect(contentBuffer)
     let content: string
@@ -82,8 +76,21 @@ async function importFromFile(filePath: string) {
     }
 
     // 预处理
-    content = content.replace(/[　 ]/g, ' ')
+    content = content.replace(/[　 	]/g, ' ')
         .replace(/\r/g, '')
+    return content
+}
+
+async function importFromFile(filePath: string) {
+    let bookTitle = path.parse(filePath).name
+    let novelIdOrNull = await novelModel.findNovelByTitle(bookTitle)
+    if (novelIdOrNull && !options.overwrite) {
+        // logger.debug('跳过：' + bookTitle)
+        // logger.debug('------')
+        return
+    }
+    logger.debug('开始处理：' + bookTitle)
+    let content = readFileToContent(filePath)
     let bookWordcount = content.replace(/\s/g, '').length
     let contentArr = content.split('\n')
     contentArr = contentArr.filter(value => value.trim().length != 0)
@@ -201,4 +208,8 @@ function isChapterTitle(useTitleWithSignifier: boolean, mostIndent: string, line
     } else {
         return getLineIndent(line) != mostIndent
     }
+}
+
+async function documentalize(filePath: string) {
+
 }
