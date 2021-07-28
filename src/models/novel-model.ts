@@ -39,6 +39,11 @@ export class NovelModel {
                 likeSegment += ' and n.title like \'%' + keyword + '%\' '
             }
         }
+        let inSegment = ''
+        if (tagIdArr.length) {
+            inSegment = ' and n.id in (select tm.novelId from tagmap tm where tm.tagId in (' + tagIdArr.join(',') + ') ' +
+                'group by tm.novelId having count(tm.novelId)=' + tagIdArr.length + ') '
+        }
         /**
          select group_concat(t.name) as tags,n.* from novels n
          left join tagmap tm on tm.novelId=n.id
@@ -48,8 +53,7 @@ export class NovelModel {
          group by n.id
          */
         let arr = await db.query(getNovelWithTagsSqlSegment('time', 'desc',
-            'where n.id in (select tm.novelId from tagmap tm where tm.tagId in (' + tagIdArr.join(',') + ') ' +
-            'group by tm.novelId having count(tm.novelId)=' + tagIdArr.length + ') ' + likeSegment))
+            'where 1=1 ' + inSegment + likeSegment))
         return arr.map((single: any) => fillINovel(single))
     }
 
