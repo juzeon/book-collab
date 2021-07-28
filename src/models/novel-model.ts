@@ -32,6 +32,28 @@ export class NovelModel {
         return novels.map((novel: any) => fillINovel(novel))
     }
 
+    async findNovelsByTagIdsKeywords(tagIdArr: number[], keywordArr: string[]) {
+        let likeSegment = ''
+        if (keywordArr.length) {
+            for (let keyword of keywordArr) {
+                likeSegment += ' and n.title like \'%' + keyword + '%\' '
+            }
+        }
+        /**
+         select group_concat(t.name) as tags,n.* from novels n
+         left join tagmap tm on tm.novelId=n.id
+         left join tags t on t.id=tm.tagId
+         where n.id in (select tm.novelId from tagmap tm where tm.tagId in (10,11) group by tm.novelId having count(tm.novelId)=2)
+         // 子查询：统计每本查出的小说拥有的标签数量，如果这个数量为传入标签的数量，说明目标小说每个传入的标签都有，正是需要的
+         group by n.id
+         */
+        let arr = await db.query(getNovelWithTagsSqlSegment('time', 'desc',
+            'where n.id in (select tm.novelId from tagmap tm where tm.tagId in (' + tagIdArr.join(',') + ') ' +
+            'group by tm.novelId having count(tm.novelId)=' + tagIdArr.length + ') ' + likeSegment))
+        return arr.map((single: any) => fillINovel(single))
+    }
+
+
     async getTocByNovelId(novelId: number) {
         let arr = await db.query('select orderId,title,wordcount from chapters where novelId=? order by orderId asc',
             [novelId])

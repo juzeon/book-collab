@@ -100,4 +100,24 @@ export let novelExistValidator: CustomValidator = async (novelId: number, {req})
     return true
 }
 
+intersection([11, 22])
+
+export function intersection(lists: any[]) {
+    let result = []
+    for (let i = 0; i < lists.length; i++) {
+        let currentList = lists[i]
+        for (let y = 0; y < currentList.length; y++) {
+            let currentValue = currentList[y]
+            if (result.indexOf(currentValue) === -1) {
+                if (lists.filter(function (obj) {
+                    return obj.indexOf(currentValue) == -1
+                }).length == 0) {
+                    result.push(currentValue)
+                }
+            }
+        }
+    }
+    return result
+}
+
 export {logger, db}

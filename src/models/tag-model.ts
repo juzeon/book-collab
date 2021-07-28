@@ -27,4 +27,9 @@ export class TagModel {
         let insertingArr = arr.map(tag => [novelId, tag2idMap.get(tag)])
         await db.query('insert into tagmap (novelId,tagId) values ?', [insertingArr])
     }
+
+    async findTagIdsByName(tagNameArr: string[]) {
+        let arr = await db.query('select id from tags where name in (?)', [tagNameArr])
+        return arr.map((single: any) => Number(single.id))
+    }
 }

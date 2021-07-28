@@ -12,12 +12,10 @@ let novelRouter = express.Router()
 
 novelRouter.get('/list',
     query('page').default(1).isInt({min: 1}),
-    query('tags').default('').customSanitizer((input: string, {req}) => {
-        return tagsToArray(input)
-    }),
+    query('search').default(''),
     async (req: express.Request, res: express.Response) => {
         if (hasValidationErrors(req, res)) return
-        res.json(await novelService.list(req.query.tags as string[], Number(req.query.page)))
+        res.json(await novelService.list(Number(req.query.page), req.query.search as string))
     }
 )
 novelRouter.get('/:novelId',
@@ -29,10 +27,10 @@ novelRouter.get('/:novelId',
 )
 novelRouter.get('/:novelId/chapter/:orderId',
     param('novelId').isInt().custom(novelExistValidator),
-    param('orderId').isInt({min:0}),
+    param('orderId').isInt({min: 0}),
     async (req: express.Request, res: express.Response) => {
         if (hasValidationErrors(req, res)) return
-        res.json(await novelService.chapter(Number(req.params.novelId),Number(req.params.orderId)))
+        res.json(await novelService.chapter(Number(req.params.novelId), Number(req.params.orderId)))
     }
 )
 
