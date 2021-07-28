@@ -13,13 +13,15 @@ import {IChapter} from "../types"
 import glob from "glob-promise"
 
 program
-    .option('-f, --file <file>', '指定文件或文件夹导入', false)
+    .option('-f, --file <file>', '指定文件或文件夹导入，请保证仅有txt文件', false)
+    .option('-r, --recursive', '当file为文件夹的时候，使用递归方式遍历文件夹与子文件夹', false)
     .option('-t, --tags <tags>', '打标签，中间使用逗号分隔。例如：A,B,C', false)
     .option('-o, --overwrite', '覆盖已经有存在标题的小说', false)
     .option('-i, --indent', '强制使用indent分章节', false)
 program.parse()
 const options = {
     file: program.opts().file,
+    recursive: program.opts().recursive,
     tags: program.opts().tags,
     overwrite: program.opts().overwrite,
     indent: program.opts().indent
@@ -42,7 +44,12 @@ async function script() {
         let filePath = options.file
         await importFromFile(filePath)
     } else {
-        let files = await glob.promise(path.join(options.file, '**/*.txt'))
+        let files: string[]
+        if (options.recursive) {
+            files = await glob.promise(path.join(options.file, '**/*.txt'))
+        } else {
+            files = fs.readdirSync(options.file).map(value => path.join(options.file, value))
+        }
         for (let filePath of files) {
             if (fs.statSync(filePath).isFile()) {
                 await importFromFile(filePath)
@@ -67,7 +74,7 @@ async function importFromFile(filePath: string) {
     let encoding = chardet.detect(contentBuffer)
     let content: string
     // 获得编码方式
-    logger.debug('编码方式：'+encoding)
+    logger.debug('编码方式：' + encoding)
     if (encoding != 'UTF-8') {
         content = Buffer.from(iconv.decode(contentBuffer, encoding!)).toString('utf-8')
     } else {
