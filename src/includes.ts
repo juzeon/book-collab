@@ -36,7 +36,7 @@ export function getLineIndent(line: string) {
 
 export function isTitleWithSignifier(line: string) {
     return line.replace(/\s*/g, '').length <= appConfig.maxTitleWordcount && (
-        /[1-9一二三四五六七八九十]+(章|回|幕|话|节|\.|、|:|：|-|，)+/.test(line)
+        /[1-9一二三四五六七八九十]+(章|回|幕|话|节|\.|、|:|：|，| )+/.test(line)
         || /番外/.test(line)
         || /特别篇/.test(line)
     )
