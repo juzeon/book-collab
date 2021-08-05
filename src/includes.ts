@@ -181,13 +181,13 @@ export async function readFallbackNovel(novel: INovel): Promise<IFallbackNovelDa
             chapters.push({
                 orderId: realIndex,
                 novelId: novel.id!,
-                title: numberWithCommas(index + 1),
+                title: numberWithCommas(realIndex + 1),
                 content: cachedContent,
                 wordcount: cachedWordcount
             })
             toc.push({
                 orderId: realIndex,
-                title: numberWithCommas(index + 1),
+                title: numberWithCommas(realIndex + 1),
                 wordcount: cachedWordcount
             })
             cachedWordcount = 0
