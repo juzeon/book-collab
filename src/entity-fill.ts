@@ -1,4 +1,4 @@
-import {IChapter, INovel} from "./types"
+import {IChapter, INovel, ITocItem} from "./types"
 
 export function fillINovel(single: any) {
     return <INovel>{
@@ -6,6 +6,7 @@ export function fillINovel(single: any) {
         title: single.title,
         intro: single.intro,
         wordcount: single.wordcount,
+        encoding: single.encoding,
         time: single.time,
         tags: single.tags
     }
@@ -19,5 +20,13 @@ export function fillIChapter(single: any) {
         content: single.content,
         wordcount: single.wordcount,
         orderId: single.orderId,
+    }
+}
+
+export function fillIToc(single: any) {
+    return <ITocItem>{
+        orderId: single.orderId,
+        title: single.title,
+        wordcount: single.wordcount
     }
 }

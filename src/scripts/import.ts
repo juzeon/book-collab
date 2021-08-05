@@ -1,6 +1,14 @@
 import 'reflect-metadata'
 import {program} from 'commander'
-import {db, getLineIndent, getPoolCreatingPromise, isTitleWithSignifier, logger, tagsToArray} from "../includes"
+import {
+    db,
+    getLineIndent,
+    getPoolCreatingPromise,
+    isTitleWithSignifier,
+    logger,
+    readFileMeta,
+    tagsToArray
+} from "../includes"
 import * as fs from "fs"
 import chardet from 'chardet'
 import iconv from 'iconv-lite'
@@ -18,7 +26,6 @@ program
     .option('-t, --tags <tags>', '打标签，中间使用逗号分隔。例如：A,B,C', false)
     .option('-o, --overwrite', '覆盖已经有存在标题的小说', false)
     .option('-i, --indent', '强制使用indent分章节', false)
-    .option('-d, --documentalize', '将数据录入NoSQL', false)
 program.parse()
 const options = {
     file: program.opts().file,
@@ -26,7 +33,6 @@ const options = {
     tags: program.opts().tags,
     overwrite: program.opts().overwrite,
     indent: program.opts().indent,
-    documentalize: program.opts().documentalize
 }
 logger.debug(options)
 
@@ -55,6 +61,7 @@ async function script() {
         for (let filePath of files) {
             if (fs.statSync(filePath).isFile()) {
                 await importFromFile(filePath)
+                // await remedyEncoding(filePath)
             }
         }
     }
@@ -63,23 +70,15 @@ async function script() {
 
 script()
 
-function readFileToContent(filePath: string) {
-    let contentBuffer = Buffer.from(fs.readFileSync(filePath))
-    let encoding = chardet.detect(contentBuffer)
-    let content: string
-    // 获得编码方式
-    logger.debug('编码方式：' + encoding)
-    if (encoding != 'UTF-8') {
-        content = Buffer.from(iconv.decode(contentBuffer, encoding!)).toString('utf-8')
-    } else {
-        content = contentBuffer.toString('utf-8')
-    }
-
-    // 预处理
-    content = content.replace(/[　 	]/g, ' ')
-        .replace(/\r/g, '')
-    return content
-}
+// async function remedyEncoding(filePath: string) {
+//     let bookTitle = path.parse(filePath).name
+//     let novelIdOrNull = await novelModel.findNovelByTitle(bookTitle)
+//     if (novelIdOrNull) {
+//         let {content, encoding} = readFileMeta(filePath)
+//         db.query('update novels set encoding=? where id=?', [encoding, novelIdOrNull])
+//         console.log('修正 '+bookTitle+' with encoding '+encoding)
+//     }
+// }
 
 async function importFromFile(filePath: string) {
     let bookTitle = path.parse(filePath).name
@@ -90,7 +89,7 @@ async function importFromFile(filePath: string) {
         return
     }
     logger.debug('开始处理：' + bookTitle)
-    let content = readFileToContent(filePath)
+    let {content, encoding} = readFileMeta(filePath)
     let bookWordcount = content.replace(/\s/g, '').length
     let contentArr = content.split('\n')
     contentArr = contentArr.filter(value => value.trim().length != 0)
@@ -155,6 +154,7 @@ async function importFromFile(filePath: string) {
             title: bookTitle,
             intro: contentArr.map(value => value.trim()).join('\n').slice(0, 300),
             wordcount: bookWordcount,
+            encoding: encoding,
             time: Math.floor(Date.now() / 1000)
         }])
         novelId = packet.insertId
@@ -210,6 +210,3 @@ function isChapterTitle(useTitleWithSignifier: boolean, mostIndent: string, line
     }
 }
 
-async function documentalize(filePath: string) {
-
-}

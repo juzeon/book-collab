@@ -1,8 +1,8 @@
 import 'reflect-metadata'
 import {Service} from "typedi"
 import {db, getNovelWithTagsSqlSegment, pageToLimitSqlSegment} from "../includes"
-import {IChapter, INovel} from "../types"
-import {fillIChapter, fillINovel} from "../entity-fill"
+import {IChapter, INovel, ITocItem} from "../types"
+import {fillIChapter, fillINovel, fillIToc} from "../entity-fill"
 
 @Service()
 export class NovelModel {
@@ -11,8 +11,8 @@ export class NovelModel {
     }
 
     async insertNovels(novels: INovel[]) {
-        return db.query('insert into novels (title,intro,wordcount,time) values ?', [
-            novels.map(novel => [novel.title, novel.intro, novel.wordcount, novel.time])
+        return db.query('insert into novels (title,intro,wordcount,encoding,time) values ?', [
+            novels.map(novel => [novel.title, novel.intro, novel.wordcount, novel.encoding, novel.time])
         ])
     }
 
@@ -32,7 +32,7 @@ export class NovelModel {
         return novels.map((novel: any) => fillINovel(novel))
     }
 
-    async findNovelsByTagIdsKeywords(tagIdArr: number[], keywordArr: string[]) {
+    async findNovelsByTagIdsKeywords(tagIdArr: number[], keywordArr: string[]): Promise<INovel> {
         let likeSegment = ''
         if (keywordArr.length) {
             for (let keyword of keywordArr) {
@@ -58,10 +58,10 @@ export class NovelModel {
     }
 
 
-    async getTocByNovelId(novelId: number) {
+    async getTocByNovelId(novelId: number): Promise<ITocItem[]> {
         let arr = await db.query('select orderId,title,wordcount from chapters where novelId=? order by orderId asc',
             [novelId])
-        return arr
+        return arr.map((single: any) => fillIToc(single))
     }
 
     async findNovelById(id: number) {

@@ -1,8 +1,8 @@
 import 'reflect-metadata'
 import {Inject, Service} from "typedi"
-import {resultJson} from "../includes"
+import {addWordcountLineToChapterContent, readFallbackNovel, resultJson} from "../includes"
 import {NovelModel} from "../models/novel-model"
-import {INovel} from "../types"
+import {IChapter, INovel, ITocItem} from "../types"
 import {TagModel} from "../models/tag-model"
 
 @Service()
@@ -29,13 +29,37 @@ export class NovelService {
         return resultJson.success(novels)
     }
 
-    async novelInfo(novel: INovel) {
-        let toc = await this.novelModel.getTocByNovelId(novel.id!)
+    async novelInfo(novel: INovel, fallback: boolean) {
+        let toc: ITocItem[]
+        if (fallback) {
+            let iFallbackNovelData = await readFallbackNovel(novel)
+            if (iFallbackNovelData) {
+                toc = iFallbackNovelData.toc
+            } else {
+                return resultJson.error('txt不存在')
+            }
+        } else {
+            toc = await this.novelModel.getTocByNovelId(novel.id!)
+        }
         return resultJson.success({meta: novel, toc: toc})
     }
 
-    async chapter(novelId: number, orderId: number) {
-        let chapter = await this.novelModel.findChapterByNovelIdOrderId(novelId, orderId)
+    async chapter(novel: INovel, orderId: number, fallback: boolean) {
+        let chapter: IChapter | null
+        if (fallback) {
+            let iFallbackNovelData = await readFallbackNovel(novel)
+            if (iFallbackNovelData) {
+                chapter = iFallbackNovelData.chapters.find(value => value.orderId == orderId) || null
+            } else {
+                return resultJson.error('txt不存在')
+            }
+        } else {
+            chapter = await this.novelModel.findChapterByNovelIdOrderId(novel.id!, orderId)
+        }
+        if (!chapter) {
+            return resultJson.error('章节不存在')
+        }
+        chapter = addWordcountLineToChapterContent(chapter)
         return resultJson.success(chapter)
     }
 }

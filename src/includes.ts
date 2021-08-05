@@ -8,6 +8,11 @@ import express from "express"
 import {CustomValidator, Meta, validationResult} from "express-validator"
 import {Container} from "typedi"
 import {NovelModel} from "./models/novel-model"
+import chardet from "chardet"
+import iconv from "iconv-lite"
+import {IChapter, IFallbackNovelData, IFileData, INovel, ISplitedChapter, ITocItem} from "./types"
+import glob from "glob-promise"
+import appRoot from 'app-root-path'
 
 const logger = getLogger()
 logger.level = "debug"
@@ -118,6 +123,88 @@ export function intersection(lists: any[]) {
         }
     }
     return result
+}
+
+export function readFileMeta(filePath: string, crudeDetect: boolean = false, ensuredEncoding: string | undefined = undefined) {
+    let contentBuffer = Buffer.from(fs.readFileSync(filePath))
+    let encoding: string
+    if (ensuredEncoding) {
+        encoding = ensuredEncoding
+    } else {
+        if (crudeDetect) {
+            encoding = chardet.detectFileSync(filePath, {sampleSize: appConfig.crudeEncodingDetectSampleSize}) as string
+        } else {
+            encoding = chardet.detect(contentBuffer) || 'UTF-8'
+        }
+    }
+    let content: string
+    // 获得编码方式
+    // logger.debug('编码方式：' + encoding)
+    if (encoding != 'UTF-8') {
+        content = Buffer.from(iconv.decode(contentBuffer, encoding)).toString('utf-8')
+    } else {
+        content = contentBuffer.toString('utf-8')
+    }
+
+    // 预处理
+    content = content.replace(/[　 	]/g, ' ')
+        .replace(/\r/g, '')
+    return <IFileData>{
+        content,
+        encoding
+    }
+}
+
+export function numberWithCommas(x: number) {
+    return x.toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
+}
+
+export async function readFallbackNovel(novel: INovel): Promise<IFallbackNovelData | null> {
+    let filePathArr = await glob.promise(path.join(appRoot.path, appConfig.fallbackNovelDirectory!, '**/*.txt'))
+    let filePath = filePathArr.find(value => path.parse(value).name == novel.title) || null
+    if (!filePath) {
+        return null
+    }
+    let {content} = readFileMeta(filePath, false, novel.encoding)
+    let contentArr = content.split('\n')
+    contentArr = contentArr.filter(value => value.trim().length != 0)
+
+    let cachedWordcount = 0
+    let cachedContent = ''
+    let realIndex = 0
+    let chapters: IChapter[] = []
+    let toc: ITocItem[] = []
+    for (let [index, line] of contentArr.entries()) {
+        cachedContent += line.trim() + '\n'
+        cachedWordcount += line.trim().length
+        if (cachedWordcount >= appConfig.splitChapterWordcount || index == contentArr.length - 1) {
+            chapters.push({
+                orderId: realIndex,
+                novelId: novel.id!,
+                title: numberWithCommas(index + 1),
+                content: cachedContent,
+                wordcount: cachedWordcount
+            })
+            toc.push({
+                orderId: realIndex,
+                title: numberWithCommas(index + 1),
+                wordcount: cachedWordcount
+            })
+            cachedWordcount = 0
+            cachedContent = ''
+            realIndex++
+        }
+    }
+    return <IFallbackNovelData>{
+        chapters,
+        toc
+    }
+}
+
+export function addWordcountLineToChapterContent(chapter: IChapter) {
+    let dupChapter = JSON.parse(JSON.stringify(chapter))
+    dupChapter.content = '字数：' + dupChapter.wordcount + '\n' + dupChapter.content
+    return dupChapter
 }
 
 export {logger, db}

@@ -20,17 +20,19 @@ novelRouter.get('/list',
 )
 novelRouter.get('/:novelId',
     param('novelId').isInt().custom(novelExistValidator),
+    query('fallback').default(false).isBoolean(),
     async (req: express.Request, res: express.Response) => {
         if (hasValidationErrors(req, res)) return
-        res.json(await novelService.novelInfo(req.params.novel as any as INovel))
+        res.json(await novelService.novelInfo(req.params.novel as any as INovel, Boolean(req.query.fallback)))
     }
 )
 novelRouter.get('/:novelId/chapter/:orderId',
     param('novelId').isInt().custom(novelExistValidator),
     param('orderId').isInt({min: 0}),
+    query('fallback').default(false).isBoolean(),
     async (req: express.Request, res: express.Response) => {
         if (hasValidationErrors(req, res)) return
-        res.json(await novelService.chapter(Number(req.params.novelId), Number(req.params.orderId)))
+        res.json(await novelService.chapter(req.params.novel as any as INovel, Number(req.params.orderId), Boolean(req.query.fallback)))
     }
 )
 
