@@ -32,7 +32,7 @@ export class NovelModel {
         return novels.map((novel: any) => fillINovel(novel))
     }
 
-    async findNovelsByTagIdsKeywords(tagIdArr: number[], keywordArr: string[]): Promise<INovel> {
+    async findNovelsByTagIdsKeywords(tagIdArr: number[], keywordArr: string[], page: number): Promise<INovel> {
         let likeSegment = ''
         if (keywordArr.length) {
             for (let keyword of keywordArr) {
@@ -53,7 +53,7 @@ export class NovelModel {
          group by n.id
          */
         let arr = await db.query(getNovelWithTagsSqlSegment('time', 'desc',
-            'where 1=1 ' + inSegment + likeSegment))
+            'where 1=1 ' + inSegment + likeSegment) + pageToLimitSqlSegment(page))
         return arr.map((single: any) => fillINovel(single))
     }
 
