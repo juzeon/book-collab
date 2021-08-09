@@ -64,6 +64,11 @@ export class NovelModel {
         return arr.map((single: any) => fillIToc(single))
     }
 
+    async getBulkChaptersByNovelId(novelId: number): Promise<IChapter[]> {
+        let arr = await db.query('select * from chapters where novelId=? order by orderId asc', [novelId])
+        return arr.map((single: any) => fillIChapter(single))
+    }
+
     async findNovelById(id: number) {
         let arr = await db.query(getNovelWithTagsSqlSegment('time', 'desc', 'where n.id=?'),
             [id])

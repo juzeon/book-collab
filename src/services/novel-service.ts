@@ -33,11 +33,7 @@ export class NovelService {
         let toc: ITocItem[]
         if (fallback) {
             let iFallbackNovelData = await readFallbackNovel(novel)
-            if (iFallbackNovelData) {
-                toc = iFallbackNovelData.toc
-            } else {
-                return resultJson.error('txt不存在')
-            }
+            toc = iFallbackNovelData.toc
         } else {
             toc = await this.novelModel.getTocByNovelId(novel.id!)
         }
@@ -48,11 +44,7 @@ export class NovelService {
         let chapter: IChapter | null
         if (fallback) {
             let iFallbackNovelData = await readFallbackNovel(novel)
-            if (iFallbackNovelData) {
-                chapter = iFallbackNovelData.chapters.find(value => value.orderId == orderId) || null
-            } else {
-                return resultJson.error('txt不存在')
-            }
+            chapter = iFallbackNovelData.chapters.find(value => value.orderId == orderId) || null
         } else {
             chapter = await this.novelModel.findChapterByNovelIdOrderId(novel.id!, orderId)
         }

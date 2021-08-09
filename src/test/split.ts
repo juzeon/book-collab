@@ -1,6 +1,5 @@
 import {readFileMeta, db, getPoolCreatingPromise, numberWithCommas} from "../includes"
 import {appConfig} from "../config"
-import {ISplitedChapter} from "../types"
 
 
 (async function () {

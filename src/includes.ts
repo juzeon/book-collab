@@ -10,7 +10,7 @@ import {Container} from "typedi"
 import {NovelModel} from "./models/novel-model"
 import chardet from "chardet"
 import iconv from "iconv-lite"
-import {IChapter, IFallbackNovelData, IFileData, INovel, ISplitedChapter, ITocItem} from "./types"
+import {IChapter, IFallbackNovelData, IFileData, INovel, ITocItem} from "./types"
 import glob from "glob-promise"
 import appRoot from 'app-root-path'
 
@@ -159,13 +159,21 @@ export function numberWithCommas(x: number) {
     return x.toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")
 }
 
-export async function readFallbackNovel(novel: INovel): Promise<IFallbackNovelData | null> {
-    let filePathArr = await glob.promise(path.join(appRoot.path, appConfig.fallbackNovelDirectory!, '**/*.txt'))
-    let filePath = filePathArr.find(value => path.parse(value).name == novel.title) || null
-    if (!filePath) {
-        return null
+export async function readFallbackNovel(novel: INovel): Promise<IFallbackNovelData> {
+    let content = ''
+    if (appConfig.readFallbackNovelFromDisk) {
+        let filePathArr = await glob.promise(path.join(appRoot.path, appConfig.fallbackNovelDirectory!, '**/*.txt'))
+        let filePath = filePathArr.find(value => path.parse(value).name == novel.title) || null
+        if(!filePath){
+            console.log('filePath not found')
+        }
+        content = readFileMeta(filePath!, false, novel.encoding).content
+    } else {
+        let bulkChapters = await Container.get(NovelModel).getBulkChaptersByNovelId(novel.id!)
+        for (let bChapter of bulkChapters) {
+            content += bChapter.title + '\n' + bChapter.content + '\n'
+        }
     }
-    let {content} = readFileMeta(filePath, false, novel.encoding)
     let contentArr = content.split('\n')
     contentArr = contentArr.filter(value => value.trim().length != 0)
 
@@ -181,13 +189,13 @@ export async function readFallbackNovel(novel: INovel): Promise<IFallbackNovelDa
             chapters.push({
                 orderId: realIndex,
                 novelId: novel.id!,
-                title: numberWithCommas(realIndex + 1),
+                title: 'Chunk ' + numberWithCommas(realIndex + 1),
                 content: cachedContent,
                 wordcount: cachedWordcount
             })
             toc.push({
                 orderId: realIndex,
-                title: numberWithCommas(realIndex + 1),
+                title: 'Chunk ' + numberWithCommas(realIndex + 1),
                 wordcount: cachedWordcount
             })
             cachedWordcount = 0

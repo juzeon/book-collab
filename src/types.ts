@@ -17,12 +17,6 @@ export interface INovel {
     tags?: string
 }
 
-export interface ISplitedChapter {
-    title: string,
-    content: string,
-    wordcount: number
-}
-
 export interface IFileData {
     content: string,
     encoding: string

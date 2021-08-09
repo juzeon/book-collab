@@ -1,4 +1,21 @@
 require('dotenv').config()
+
+function stringToBoolean(string: string) {
+    switch (string.toLowerCase().trim()) {
+        case "true":
+        case "yes":
+        case "1":
+            return true
+        case "false":
+        case "no":
+        case "0":
+        case null:
+            return false
+        default:
+            return Boolean(string)
+    }
+}
+
 const appConfig = {
     port: parseInt(process.env.PORT!),
     dbHost: process.env.DB_HOST,
@@ -12,6 +29,7 @@ const appConfig = {
     testFilePath: process.env.TEST_FILE_PATH,
     splitChapterWordcount: parseInt(process.env.SPLIT_CHAPTER_WORDCOUNT!),
     crudeEncodingDetectSampleSize: parseInt(process.env.CRUDE_ENCODING_DETECT_SAMPLE_SIZE!),
-    fallbackNovelDirectory: process.env.FALLBACK_NOVEL_DIRECTORY
+    fallbackNovelDirectory: process.env.FALLBACK_NOVEL_DIRECTORY,
+    readFallbackNovelFromDisk: stringToBoolean(process.env.READ_FALLBACK_NOVEL_FROM_DISK!)
 }
 export {appConfig}
