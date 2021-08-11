@@ -125,6 +125,7 @@ export function intersection(lists: any[]) {
     return result
 }
 
+// crudeDetect 是否粗糙检测编码；当ensuredEncoding启用时，crudeDetect无效
 export function readFileMeta(filePath: string, crudeDetect: boolean = false, ensuredEncoding: string | undefined = undefined) {
     let contentBuffer = Buffer.from(fs.readFileSync(filePath))
     let encoding: string

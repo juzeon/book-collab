@@ -4,6 +4,7 @@ import {addWordcountLineToChapterContent, readFallbackNovel, resultJson} from ".
 import {NovelModel} from "../models/novel-model"
 import {IChapter, INovel, ITocItem} from "../types"
 import {TagModel} from "../models/tag-model"
+import express from "express"
 
 @Service()
 export class NovelService {
@@ -38,6 +39,25 @@ export class NovelService {
             toc = await this.novelModel.getTocByNovelId(novel.id!)
         }
         return resultJson.success({meta: novel, toc: toc})
+    }
+
+    async downloadNovel(res: express.Response, novel: INovel, fallback: boolean) {
+        let txtContent = ''
+        if (fallback) {
+            let {chapters} = await readFallbackNovel(novel)
+            chapters = chapters.map(value => addWordcountLineToChapterContent(value))
+            for (let chapter of chapters) {
+                txtContent += '# ' + chapter.title + '\n' + chapter.content + '\n'
+            }
+        } else {
+            let chapters = await this.novelModel.getBulkChaptersByNovelId(novel.id!)
+            chapters = chapters.map(value => addWordcountLineToChapterContent(value))
+            for (let chapter of chapters) {
+                txtContent += '# ' + chapter.title + '\n' + chapter.content + '\n'
+            }
+        }
+        res.setHeader('Content-disposition', 'attachment; filename=' + encodeURI(novel.title) + '.txt')
+        res.send(txtContent)
     }
 
     async chapter(novel: INovel, orderId: number, fallback: boolean) {
