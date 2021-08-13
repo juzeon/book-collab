@@ -32,3 +32,10 @@ export interface IFallbackNovelData {
     toc: ITocItem[],
     chapters: IChapter[]
 }
+
+export interface IGetNovelsArguments {
+    orderBy?: string,
+    orderByType?: 'asc' | 'desc',
+    novelTableConditions?: string,
+    withoutIntro?: boolean
+}

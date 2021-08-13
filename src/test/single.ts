@@ -1,4 +1,4 @@
-import {getNovelWithTagsSqlSegment} from "../includes"
+import {getNovelsWithTagsSqlSegment} from "../includes"
 import glob from "glob-promise"
 import path from "path"
 

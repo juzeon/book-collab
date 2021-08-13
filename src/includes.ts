@@ -10,7 +10,7 @@ import {Container} from "typedi"
 import {NovelModel} from "./models/novel-model"
 import chardet from "chardet"
 import iconv from "iconv-lite"
-import {IChapter, IFallbackNovelData, IFileData, INovel, ITocItem} from "./types"
+import {IChapter, IFallbackNovelData, IFileData, IGetNovelsArguments, INovel, ITocItem} from "./types"
 import glob from "glob-promise"
 import appRoot from 'app-root-path'
 
@@ -84,14 +84,32 @@ export function pageToLimitSqlSegment(page: number) {
     return ' limit ' + (page - 1) * appConfig.perPage + ',' + appConfig.perPage
 }
 
-export function getNovelWithTagsSqlSegment(orderBy: string, orderByType: 'asc' | 'desc', novelTableConditions: string = '') {
-    return 'select n.*,group_concat(t.name) as tags ' +
+export function getNovelsWithTagsSqlSegment(args: IGetNovelsArguments = {}) {
+    let usedArgs = <IGetNovelsArguments>{
+        orderBy: 'time',
+        orderByType: 'desc',
+        novelTableConditions: '',
+        withoutIntro: false,
+    }
+    if (args.orderBy !== undefined) {
+        usedArgs.orderBy = args.orderBy
+    }
+    if (args.orderByType !== undefined) {
+        usedArgs.orderByType = args.orderByType
+    }
+    if (args.novelTableConditions !== undefined) {
+        usedArgs.novelTableConditions = args.novelTableConditions
+    }
+    if (args.withoutIntro !== undefined) {
+        usedArgs.withoutIntro = args.withoutIntro
+    }
+    return 'select ' + (usedArgs.withoutIntro ? 'n.id,n.title,n.wordcount,n.encoding,n.time' : 'n.*') + ',group_concat(t.name) as tags ' +
         'from novels n ' +
         'left join tagmap tm on tm.novelId=n.id ' +
         'left join tags t on t.id=tm.tagId ' +
-        novelTableConditions + ' ' +
+        usedArgs.novelTableConditions + ' ' +
         'group by n.id ' +
-        'order by n.' + orderBy + ' ' + orderByType + ' '
+        'order by n.' + usedArgs.orderBy + ' ' + usedArgs.orderByType + ' '
 }
 
 // 有将INovel导入到req.params
@@ -165,7 +183,7 @@ export async function readFallbackNovel(novel: INovel): Promise<IFallbackNovelDa
     if (appConfig.readFallbackNovelFromDisk) {
         let filePathArr = await glob.promise(path.join(appRoot.path, appConfig.fallbackNovelDirectory!, '**/*.txt'))
         let filePath = filePathArr.find(value => path.parse(value).name == novel.title) || null
-        if(!filePath){
+        if (!filePath) {
             console.log('filePath not found')
         }
         content = readFileMeta(filePath!, false, novel.encoding).content

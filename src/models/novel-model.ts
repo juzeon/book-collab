@@ -1,6 +1,6 @@
 import 'reflect-metadata'
 import {Service} from "typedi"
-import {db, getNovelWithTagsSqlSegment, pageToLimitSqlSegment} from "../includes"
+import {db, getNovelsWithTagsSqlSegment, pageToLimitSqlSegment} from "../includes"
 import {IChapter, INovel, ITocItem} from "../types"
 import {fillIChapter, fillINovel, fillIToc} from "../entity-fill"
 
@@ -27,8 +27,13 @@ export class NovelModel {
     }
 
     async getNovels(page: number) {
-        let novels = await db.query(getNovelWithTagsSqlSegment('time', 'desc')
+        let novels = await db.query(getNovelsWithTagsSqlSegment()
             + pageToLimitSqlSegment(page))
+        return novels.map((novel: any) => fillINovel(novel))
+    }
+
+    async getBulkNovels() {
+        let novels = await db.query(getNovelsWithTagsSqlSegment({withoutIntro: true}))
         return novels.map((novel: any) => fillINovel(novel))
     }
 
@@ -52,8 +57,9 @@ export class NovelModel {
          // 子查询：统计每本查出的小说拥有的标签数量，如果这个数量为传入标签的数量，说明目标小说每个传入的标签都有，正是需要的
          group by n.id
          */
-        let arr = await db.query(getNovelWithTagsSqlSegment('time', 'desc',
-            'where 1=1 ' + inSegment + likeSegment) + pageToLimitSqlSegment(page))
+        let arr = await db.query(getNovelsWithTagsSqlSegment({
+            novelTableConditions: 'where 1=1 ' + inSegment + likeSegment
+        }) + pageToLimitSqlSegment(page))
         return arr.map((single: any) => fillINovel(single))
     }
 
@@ -70,7 +76,7 @@ export class NovelModel {
     }
 
     async findNovelById(id: number) {
-        let arr = await db.query(getNovelWithTagsSqlSegment('time', 'desc', 'where n.id=?'),
+        let arr = await db.query(getNovelsWithTagsSqlSegment({novelTableConditions: 'where n.id=?'}),
             [id])
         if (!arr.length) {
             return null

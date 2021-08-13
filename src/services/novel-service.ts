@@ -1,10 +1,14 @@
 import 'reflect-metadata'
 import {Inject, Service} from "typedi"
-import {addWordcountLineToChapterContent, readFallbackNovel, resultJson} from "../includes"
+import {addWordcountLineToChapterContent, readFallbackNovel, readFileMeta, resultJson} from "../includes"
 import {NovelModel} from "../models/novel-model"
 import {IChapter, INovel, ITocItem} from "../types"
 import {TagModel} from "../models/tag-model"
 import express from "express"
+import glob from "glob-promise"
+import path from "path"
+import appRoot from "app-root-path"
+import {appConfig} from "../config"
 
 @Service()
 export class NovelService {
@@ -30,6 +34,11 @@ export class NovelService {
         return resultJson.success(novels)
     }
 
+    async listAll(){
+        let novels = await this.novelModel.getBulkNovels()
+        return resultJson.success(novels)
+    }
+
     async novelInfo(novel: INovel, fallback: boolean) {
         let toc: ITocItem[]
         if (fallback) {
@@ -41,9 +50,13 @@ export class NovelService {
         return resultJson.success({meta: novel, toc: toc})
     }
 
-    async downloadNovel(res: express.Response, novel: INovel, fallback: boolean) {
+    async downloadNovel(res: express.Response, novel: INovel, fallback: boolean, raw: boolean) {
         let txtContent = ''
-        if (fallback) {
+        if (raw) {
+            let filePathArr = await glob.promise(path.join(appRoot.path, appConfig.fallbackNovelDirectory!, '**/*.txt'))
+            let filePath = filePathArr.find(value => path.parse(value).name == novel.title)
+            txtContent = readFileMeta(filePath!, false, novel.encoding).content
+        } else if (fallback) {
             let {chapters} = await readFallbackNovel(novel)
             chapters = chapters.map(value => addWordcountLineToChapterContent(value))
             for (let chapter of chapters) {

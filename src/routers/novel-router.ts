@@ -18,6 +18,9 @@ novelRouter.get('/list',
         res.json(await novelService.list(Number(req.query.page), req.query.search as string))
     }
 )
+novelRouter.get('/listAll', async (req: express.Request, res: express.Response) => {
+    res.json(await novelService.listAll())
+})
 novelRouter.get('/:novelId',
     param('novelId').isInt().custom(novelExistValidator),
     query('fallback').default(false).isBoolean(),
@@ -29,9 +32,10 @@ novelRouter.get('/:novelId',
 novelRouter.get('/download/:novelId',
     param('novelId').isInt().custom(novelExistValidator),
     query('fallback').default(false).isBoolean(),
+    query('raw').default(false).isBoolean(),
     async (req: express.Request, res: express.Response) => {
         if (hasValidationErrors(req, res)) return
-        await novelService.downloadNovel(res, req.params.novel as any as INovel, Boolean(req.query.fallback))
+        await novelService.downloadNovel(res, req.params.novel as any as INovel, Boolean(req.query.fallback), Boolean(req.query.raw))
     }
 )
 novelRouter.get('/:novelId/chapter/:orderId',
