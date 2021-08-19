@@ -126,6 +126,7 @@ export class NovelModel {
         return fillIChapter(arr[0])
     }
 
+    // novel.id存在：overwrite；不存在：新建小说
     async insertNovelWithChapters(novel: INovel, tagArr: string[], chapterArr: IChapter[]) {
         let conn = await db.getConnection()
         await conn.beginTransaction()

@@ -15,9 +15,6 @@ export class NovelService {
     @Inject()
     novelModel!: NovelModel
 
-    @Inject()
-    tagModel!: TagModel
-
     async list(page: number, search: string) {
         let searchArr = search.split(' ').filter(value => value.length != 0)
         if (searchArr.length == 0) {// 如果不需要进行搜索

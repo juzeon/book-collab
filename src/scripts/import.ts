@@ -143,7 +143,7 @@ async function importFromFile(filePath: string) {
     }
     logger.debug('采用正则法提取标题：' + useTitleWithSignifier)
 
-    // 录入数据库
+    // 准备录入数据库的资料
     let tagArr: string[] = []
     if (options.tags) {
         tagArr = tagsToArray(options.tags)
