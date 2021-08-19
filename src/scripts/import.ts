@@ -17,7 +17,7 @@ import {appConfig} from "../config"
 import {Container} from "typedi"
 import {TagModel} from "../models/tag-model"
 import {NovelModel} from "../models/novel-model"
-import {IChapter} from "../types"
+import {IChapter, INovel} from "../types"
 import glob from "glob-promise"
 
 program
@@ -41,9 +41,6 @@ let novelModel = Container.get(NovelModel)
 
 async function script() {
     await getPoolCreatingPromise()
-    if (options.tags) {
-        await tagModel.createTagsOrIgnore(tagsToArray(options.tags))
-    }
     if (!fs.existsSync(options.file)) {
         logger.debug('文件或文件夹不存在')
         return
@@ -147,26 +144,18 @@ async function importFromFile(filePath: string) {
     logger.debug('采用正则法提取标题：' + useTitleWithSignifier)
 
     // 录入数据库
-    // 如果novel不存在的话插入novels表。不管怎么样novel表、tagmap表都不会被overwrite
-    let novelId: number
-    if (!novelIdOrNull) {
-        let packet = await novelModel.insertNovels([{
-            title: bookTitle,
-            intro: contentArr.map(value => value.trim()).join('\n').slice(0, 300),
-            wordcount: bookWordcount,
-            encoding: encoding,
-            time: Math.floor(Date.now() / 1000)
-        }])
-        novelId = packet.insertId
-        if (options.tags) {
-            await tagModel.taggingNovel(novelId, tagsToArray(options.tags))
-        }
-    } else {
-        novelId = novelIdOrNull
+    let tagArr: string[] = []
+    if (options.tags) {
+        tagArr = tagsToArray(options.tags)
     }
-    // 插入chapters表
-    // 先删除旧的chapters（不论是否存在）
-    await novelModel.deleteChaptersByNovelId(novelId)
+    let novel = <INovel>{
+        id: novelIdOrNull,
+        title: bookTitle,
+        intro: contentArr.map(value => value.trim()).join('\n').slice(0, 300),
+        wordcount: bookWordcount,
+        encoding: encoding,
+        time: Math.floor(Date.now() / 1000)
+    }
     let chapterArr = new Array<IChapter>()
     // 缓存区数据
     let tmpTitle = '开始'
@@ -177,7 +166,7 @@ async function importFromFile(filePath: string) {
         if (isChapterTitle(useTitleWithSignifier, mostIndent, line)) {
             // 先处理缓存区
             chapterArr.push({
-                novelId: novelId,
+                novelId: 0,// 将在model中被重新fill
                 title: tmpTitle,
                 content: tmpContent,
                 wordcount: tmpContent.length,
@@ -192,13 +181,13 @@ async function importFromFile(filePath: string) {
     }
     // 最后处理末尾缓存区
     chapterArr.push({
-        novelId: novelId,
+        novelId: 0,
         title: tmpTitle,
         content: tmpContent,
         wordcount: tmpContent.length,
         orderId: tmpOrderId
     })
-    await novelModel.insertChapters(chapterArr)
+    await novelModel.insertNovelWithChapters(novel, tagArr, chapterArr)
     logger.debug('---------')
 }
 

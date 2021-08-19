@@ -29,7 +29,7 @@ export class NovelService {
         let keywordArr = searchArr.filter(value => !value.startsWith('#'))
             .map(value => value.replace(/%/g, '').trim())
             .filter(value => value.length != 0)
-        let tagIdArr = tagArr.length ? await this.tagModel.findTagIdsByName(tagArr) : []
+        let tagIdArr = tagArr.length ? await this.novelModel.findTagIdsByName(tagArr) : []
         let novels = await this.novelModel.findNovelsByTagIdsKeywords(tagIdArr, keywordArr, page)
         return resultJson.success(novels)
     }
