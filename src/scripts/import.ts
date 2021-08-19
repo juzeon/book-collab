@@ -159,7 +159,7 @@ async function importFromFile(filePath: string) {
     let chapterArr = new Array<IChapter>()
     // 缓存区数据
     let tmpTitle = '开始'
-    let tmpContent = '开始章节'
+    let tmpContent = '开始章节\n'
     let tmpOrderId = 0
     for (let line of contentArr) {
         // 如果判断为章节标题

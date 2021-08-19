@@ -1,3 +1,9 @@
+import express from "express"
+import {Request} from 'express'
+
+export type EReq = express.Request
+export type ERes = express.Response
+
 export interface IChapter {
     id?: number,
     novelId: number,
@@ -38,4 +44,12 @@ export interface IGetNovelsArguments {
     orderByType?: 'asc' | 'desc',
     novelTableConditions?: string,
     withoutIntro?: boolean
+}
+
+declare global {
+    namespace Express {
+        export interface Request {
+            novel?: INovel
+        }
+    }
 }

@@ -10,7 +10,7 @@ import {Container} from "typedi"
 import {NovelModel} from "./models/novel-model"
 import chardet from "chardet"
 import iconv from "iconv-lite"
-import {IChapter, IFallbackNovelData, IFileData, IGetNovelsArguments, INovel, ITocItem} from "./types"
+import {EReq, ERes, IChapter, IFallbackNovelData, IFileData, IGetNovelsArguments, INovel, ITocItem} from "./types"
 import glob from "glob-promise"
 import appRoot from 'app-root-path'
 
@@ -70,7 +70,7 @@ export let resultJson = {
     }
 }
 
-export function hasValidationErrors(req: express.Request, res: express.Response) {
+export function hasValidationErrors(req: EReq, res: ERes) {
     let validationRes = validationResult(req)
     if (validationRes.isEmpty()) {
         return false
@@ -112,14 +112,14 @@ export function getNovelsWithTagsSqlSegment(args: IGetNovelsArguments = {}) {
         'order by n.' + usedArgs.orderBy + ' ' + usedArgs.orderByType + ' '
 }
 
-// 有将INovel导入到req.params
+// 有将INovel导入到req.novel
 export let novelExistValidator: CustomValidator = async (novelId: number, {req}) => {
     let novelModel = Container.get(NovelModel)
     let novel = await novelModel.findNovelById(novelId)
     if (!novel) {
         throw new Error('novelId不存在')
     }
-    req.params!.novel = novel
+    req.novel = novel
     return true
 }
 
