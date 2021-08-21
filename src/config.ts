@@ -22,6 +22,7 @@ const appConfig = {
     dbUser: process.env.DB_USER,
     dbPassword: process.env.DB_PASSWORD,
     dbName: process.env.DB_NAME,
+    adminKey: process.env.ADMIN_KEY,
     analyzeLineCount: parseInt(process.env.ANALYZE_LINE_COUNT!),
     titleSignifierCount: parseInt(process.env.TITLE_SIGNIFIER_COUNT!),// 第、章、1-9、一-九
     maxTitleWordcount: parseInt(process.env.MAX_TITLE_WORDCOUNT!),

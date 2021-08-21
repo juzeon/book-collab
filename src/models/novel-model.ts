@@ -1,16 +1,16 @@
 import 'reflect-metadata'
 import {Service} from "typedi"
 import {db, getNovelsWithTagsSqlSegment, pageToLimitSqlSegment, tagsToArray} from "../includes"
-import {IChapter, INovel, ITocItem} from "../types"
-import {fillIChapter, fillINovel, fillIToc} from "../entity-fill"
+import {IChapter, INovel, ITag, ITocItem} from "../types"
+import {fillIChapter, fillINovel, fillITag, fillIToc} from "../entity-fill"
 
 @Service()
 export class NovelModel {
     // tag部分
     _tag2idMap: Map<string, number> | null = null
 
-    async getTag2idMap() {
-        if (this._tag2idMap) {
+    async getTag2idMap(forceUpdate: boolean = false) {
+        if (this._tag2idMap && !forceUpdate) {
             return this._tag2idMap
         }
         this._tag2idMap = new Map<string, number>()
@@ -34,6 +34,12 @@ export class NovelModel {
         let tag2idMap = await this.getTag2idMap()
         let insertingArr = arr.map(tag => [novelId, tag2idMap.get(tag)])
         await db.query('insert into tagmap (novelId,tagId) values ?', [insertingArr])
+    }
+
+    async getBulkTags(): Promise<ITag[]> {
+        let arr = await db.query('select t.id,t.name,count(tm.id) as count ' +
+            'from tags t left join tagmap tm on t.id=tm.tagId group by tm.tagId order by count desc')
+        return arr.map((single: any) => fillITag(single))
     }
 
     // novel部分
@@ -137,7 +143,6 @@ export class NovelModel {
                 novel.title, novel.intro, novel.wordcount, novel.encoding, novel.time
             ])
             novel.id = result.insertId
-
             // 只有当novelId不存在（新加小说），并且tag有东西的时候才打tag
             if (tagArr.length) {
                 // create tags or ignore
@@ -157,7 +162,31 @@ export class NovelModel {
         // commit
         try {
             await conn.commit()
-        }catch (e) {
+        } catch (e) {
+            await conn.rollback()
+            throw e
+        }
+        conn.release()
+    }
+
+    async updateTagsByNovelId(novelId: number, newTagArr: string[]) {
+        let conn = await db.getConnection()
+        conn.beginTransaction()
+        // 先删除原来的tags
+        await conn.query('delete from tagmap where novelId=?', [novelId])
+        // 如果有新tags
+        if (newTagArr.length) {
+            // 先新建这些tags
+            await db.query('insert ignore into tags (`name`) values ?', [newTagArr.map(value => [value])])
+            // 然后给novel打tag
+            let tag2idMap = await this.getTag2idMap(true)
+            let insertingArr = newTagArr.map(tag => [novelId, tag2idMap.get(tag)])
+            await conn.query('insert into tagmap (novelId,tagId) values ?', [insertingArr])
+        }
+        // commit
+        try {
+            await conn.commit()
+        } catch (e) {
             await conn.rollback()
             throw e
         }

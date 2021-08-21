@@ -46,6 +46,12 @@ export interface IGetNovelsArguments {
     withoutIntro?: boolean
 }
 
+export interface ITag {
+    id: number,
+    name: string,
+    count: number
+}
+
 declare global {
     namespace Express {
         export interface Request {
