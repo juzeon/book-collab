@@ -9,7 +9,17 @@ import {Container} from "typedi"
 import {NovelModel} from "./models/novel-model"
 import chardet from "chardet"
 import iconv from "iconv-lite"
-import {EReq, ERes, IChapter, IFallbackNovelData, IFileData, IGetNovelsArguments, INovel, ITocItem} from "./types"
+import {
+    EReq,
+    ERes,
+    IBuildChapterArrArguments,
+    IChapter,
+    IFallbackNovelData,
+    IFileData,
+    IGetNovelsArguments,
+    INovel,
+    ITocItem
+} from "./types"
 import glob from "glob-promise"
 import appRoot from 'app-root-path'
 
@@ -38,12 +48,17 @@ export function getLineIndent(line: string) {
     return /^\s*/.exec(line)![0]
 }
 
-export function isTitleWithSignifier(line: string) {
-    return line.replace(/\s*/g, '').length <= appConfig.maxTitleWordcount && (
-        /[1-9一二三四五六七八九十]+(章|回|幕|话|节|\.|、|:|：|，| )+/.test(line)
-        || /番外/.test(line)
-        || /特别篇/.test(line)
-    )
+export function isTitleWithSignifier(line: string, signifier: RegExp | undefined = undefined) {
+    if (!signifier) {
+        // 未指定手动正则，使用自动正则
+        return line.replace(/\s*/g, '').length <= appConfig.maxTitleWordcount && (
+            /[1-9一二三四五六七八九十]+(章|回|幕|话|节|\.|、|:|：|，| )+/.test(line)
+            || /番外/.test(line)
+            || /特别篇/.test(line)
+        )
+    } else {
+        return signifier.test(line)
+    }
 }
 
 export function tagsToArray(str: string): string[] {
@@ -238,6 +253,108 @@ export function addWordcountLineToChapterContent(chapter: IChapter) {
     let dupChapter = JSON.parse(JSON.stringify(chapter))
     dupChapter.content = '字数：' + dupChapter.wordcount + '\n' + dupChapter.content
     return dupChapter
+}
+
+// 自动判断是否使用signifier提取章节，如果不用，返回mostIndent供后续使用，否则mostIndent为undefined
+export function autoDetermineSignifierUsing(contentArr: string[]) {
+    // 计算indent数量统计表
+    let indentMap = new Map<string, number>()
+    for (let [index, line] of contentArr.slice(0, appConfig.analyzeLineCount).entries()) {
+        let indent = getLineIndent(line)
+        let count = indentMap.get(indent) || 0
+        count++
+        indentMap.set(indent, count)
+    }
+    logger.debug(indentMap)
+
+    // 计算最多出现的indent，就是段落了
+    let mostIndent: string = ''
+    let mostIndentCount: number = 0
+    for (let [indent, count] of indentMap.entries()) {
+        if (count >= mostIndentCount) {
+            mostIndent = indent
+            mostIndentCount = count
+        }
+    }
+
+    // 判断是否要用signifier提取标题
+    let useTitleWithSignifier = false
+    // 如果indentMap是2（完美缩进），并且indent之标题的数量超过阈值，那么绝对用indent提取标题
+    if (indentMap.size == 2
+        && contentArr.slice(0, appConfig.analyzeLineCount).length - indentMap.get(mostIndent)! >= appConfig.titleSignifierCount) {
+        useTitleWithSignifier = false
+        logger.debug('前' + appConfig.analyzeLineCount + '行中标题行数量：'
+            + (contentArr.slice(0, appConfig.analyzeLineCount).length - indentMap.get(mostIndent)!))
+    } else {
+        // 判断是否要用第x章这种格式提取标题
+        let titleWithSignifierCount = 0
+        for (let line of contentArr.slice(0, appConfig.analyzeLineCount)) {
+            // 如果能够确定这一行是段落的话就跳过
+            // if (getLineIndent(line) == mostIndent) {
+            //     continue
+            // }
+            if (isTitleWithSignifier(line)) {
+                titleWithSignifierCount++
+            }
+        }
+        // 如果达到阈值，或者完全无法通过indent提取标题，那么就启用第x章方式
+        if (titleWithSignifierCount >= appConfig.titleSignifierCount || indentMap.size == 1) {
+            useTitleWithSignifier = true
+            logger.debug('前' + appConfig.analyzeLineCount + '行中标题行数量：' + titleWithSignifierCount)
+        }
+    }
+    logger.debug('采用正则法提取标题：' + useTitleWithSignifier)
+    return {useTitleWithSignifier, mostIndent}
+}
+
+// 如果要使用signifier，就不要传mostIndent；在使用signifier时，如果没有传signifier，使用自带正则语法
+export function buildChapterArr(args: IBuildChapterArrArguments) {
+    let {contentArr, signifier, mostIndent} = args
+    let useTitleWithSignifier = true
+    if (mostIndent !== undefined) {
+        useTitleWithSignifier = false
+    }
+    let chapterArr: IChapter[] = []
+    // 缓存区数据
+    let tmpTitle = '开始'
+    let tmpContent = '开始章节\n'
+    let tmpOrderId = 0
+    for (let line of contentArr) {
+        // 如果判断为章节标题
+        if (isChapterTitle(useTitleWithSignifier, signifier, mostIndent, line)) {
+            // 先处理缓存区
+            chapterArr.push({
+                novelId: 0,// 将在model中被重新fill
+                title: tmpTitle,
+                content: tmpContent,
+                wordcount: tmpContent.length,
+                orderId: tmpOrderId
+            })
+            tmpTitle = line.trim()
+            tmpContent = ''
+            tmpOrderId++
+        } else {
+            tmpContent += line.trim() + '\n'
+        }
+    }
+    // 最后处理末尾缓存区
+    chapterArr.push({
+        novelId: 0,
+        title: tmpTitle,
+        content: tmpContent,
+        wordcount: tmpContent.length,
+        orderId: tmpOrderId
+    })
+
+    return chapterArr
+}
+
+function isChapterTitle(useTitleWithSignifier: boolean, signifier: RegExp | undefined, mostIndent: string | undefined, line: string) {
+    if (useTitleWithSignifier/* && !options.indent*/) {
+        return isTitleWithSignifier(line, signifier)
+    } else {
+        return getLineIndent(line) != mostIndent
+    }
 }
 
 export {logger, db}

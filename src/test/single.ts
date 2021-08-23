@@ -1,6 +1,8 @@
-import {getNovelsWithTagsSqlSegment, readNovelContentFromDisk} from "../includes"
-import glob from "glob-promise"
-import path from "path"
+interface Single {
+    str?: string
+}
 
-;(async function(){
-})()
+let single = <Single>{
+    str:' '
+}
+console.log(!!single.str)

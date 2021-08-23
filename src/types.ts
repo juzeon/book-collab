@@ -52,6 +52,12 @@ export interface ITag {
     count: number
 }
 
+export interface IBuildChapterArrArguments {
+    contentArr: string[],
+    signifier?: RegExp,
+    mostIndent?: string,
+}
+
 declare global {
     namespace Express {
         export interface Request {
