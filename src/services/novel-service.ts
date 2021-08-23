@@ -1,6 +1,12 @@
 import 'reflect-metadata'
 import {Inject, Service} from "typedi"
-import {addWordcountLineToChapterContent, readFallbackNovel, readFileMeta, resultJson} from "../includes"
+import {
+    addWordcountLineToChapterContent,
+    readFallbackNovel,
+    readFileMeta,
+    readNovelContentFromDisk,
+    resultJson
+} from "../includes"
 import {NovelModel} from "../models/novel-model"
 import {IChapter, INovel, ITocItem} from "../types"
 import {TagModel} from "../models/tag-model"
@@ -50,9 +56,7 @@ export class NovelService {
     async downloadNovel(res: express.Response, novel: INovel, fallback: boolean, raw: boolean) {
         let txtContent = ''
         if (raw) {
-            let filePathArr = await glob.promise(path.join(appRoot.path, appConfig.fallbackNovelDirectory!, '**/*.txt'))
-            let filePath = filePathArr.find(value => path.parse(value).name == novel.title)
-            txtContent = readFileMeta(filePath!, false, novel.encoding).content
+            txtContent = await readNovelContentFromDisk(novel)
         } else if (fallback) {
             let {chapters} = await readFallbackNovel(novel)
             chapters = chapters.map(value => addWordcountLineToChapterContent(value))

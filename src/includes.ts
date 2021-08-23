@@ -1,11 +1,10 @@
 import 'reflect-metadata'
-import {configure, getLogger} from "log4js"
+import {getLogger} from "log4js"
 import mysql, {Pool} from 'promise-mysql'
 import {appConfig} from "./config"
 import * as fs from "fs"
 import * as path from "path"
-import express from "express"
-import {CustomValidator, Meta, validationResult} from "express-validator"
+import {CustomValidator, validationResult} from "express-validator"
 import {Container} from "typedi"
 import {NovelModel} from "./models/novel-model"
 import chardet from "chardet"
@@ -143,7 +142,7 @@ export function intersection(lists: any[]) {
     return result
 }
 
-// crudeDetect 是否粗糙检测编码；当ensuredEncoding启用时，crudeDetect无效
+// crudeDetect 是否粗糙检测编码；当ensuredEncoding启用时，crudeDetect无效。该函数包含空格替换的预处理步骤。
 export function readFileMeta(filePath: string, crudeDetect: boolean = false, ensuredEncoding: string | undefined = undefined) {
     let contentBuffer = Buffer.from(fs.readFileSync(filePath))
     let encoding: string
@@ -181,12 +180,7 @@ export function numberWithCommas(x: number) {
 export async function readFallbackNovel(novel: INovel): Promise<IFallbackNovelData> {
     let content = ''
     if (appConfig.readFallbackNovelFromDisk) {
-        let filePathArr = await glob.promise(path.join(appRoot.path, appConfig.fallbackNovelDirectory!, '**/*.txt'))
-        let filePath = filePathArr.find(value => path.parse(value).name == novel.title) || null
-        if (!filePath) {
-            console.log('filePath not found')
-        }
-        content = readFileMeta(filePath!, false, novel.encoding).content
+        content = await readNovelContentFromDisk(novel)
     } else {
         let bulkChapters = await Container.get(NovelModel).getBulkChaptersByNovelId(novel.id!)
         for (let bChapter of bulkChapters) {
@@ -226,6 +220,18 @@ export async function readFallbackNovel(novel: INovel): Promise<IFallbackNovelDa
         chapters,
         toc
     }
+}
+
+export async function readNovelContentFromDisk(novel: INovel) {
+    let filePathArr = await glob.promise(path.join(appRoot.path, appConfig.fallbackNovelDirectory!, '**/*.txt'))
+    let filePath = filePathArr.filter(value => path.parse(value).name == novel.title)
+        .sort((a, b) => {
+            return fs.statSync(b).size - fs.statSync(a).size
+        })
+    if (!filePath.length) {
+        throw new Error(novel.title + ' 文件不存在')
+    }
+    return readFileMeta(filePath[0], false, novel.encoding).content
 }
 
 export function addWordcountLineToChapterContent(chapter: IChapter) {
