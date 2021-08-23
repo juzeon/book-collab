@@ -2,7 +2,7 @@ import 'reflect-metadata'
 import express from "express"
 import {Container} from "typedi"
 import {AdminService} from "../services/admin-service"
-import {body, param} from "express-validator"
+import {body} from "express-validator"
 import {hasValidationErrors, novelExistValidator} from "../includes"
 import expressAsyncHandler from "express-async-handler"
 import {EReq, ERes} from "../types"
@@ -16,6 +16,17 @@ adminRouter.post('/updateTags',
     expressAsyncHandler(async (req: EReq, res: ERes) => {
         if (hasValidationErrors(req, res)) return
         res.json(await adminService.updateTags(req.novel!, req.body.tags))
+    })
+)
+adminRouter.post('/updateSignifier',
+    body('novelId').isInt().custom(novelExistValidator),
+    body('signifier').notEmpty().custom((input: string, {req}) => {
+        req.body.regexp = new RegExp(input)
+        return true
+    }),
+    expressAsyncHandler(async (req: EReq, res: ERes) => {
+        if (hasValidationErrors(req, res)) return
+        res.json(await adminService.updateSignifier(req.novel!, req.body.regexp))
     })
 )
 

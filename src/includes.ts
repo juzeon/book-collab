@@ -202,8 +202,7 @@ export async function readFallbackNovel(novel: INovel): Promise<IFallbackNovelDa
             content += bChapter.title + '\n' + bChapter.content + '\n'
         }
     }
-    let contentArr = content.split('\n')
-    contentArr = contentArr.filter(value => value.trim().length != 0)
+    let contentArr = parseContentArr(content)
 
     let cachedWordcount = 0
     let cachedContent = ''
@@ -355,6 +354,10 @@ function isChapterTitle(useTitleWithSignifier: boolean, signifier: RegExp | unde
     } else {
         return getLineIndent(line) != mostIndent
     }
+}
+
+export function parseContentArr(content: string) {
+    return content.split('\n').filter(value => value.trim().length != 0)
 }
 
 export {logger, db}

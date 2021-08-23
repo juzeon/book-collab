@@ -7,7 +7,7 @@ import {
     isTitleWithSignifier,
     logger,
     readFileMeta,
-    tagsToArray, buildChapterArr
+    tagsToArray, buildChapterArr, parseContentArr
 } from "../includes"
 import * as fs from "fs"
 import chardet from 'chardet'
@@ -88,8 +88,7 @@ async function importFromFile(filePath: string) {
     logger.debug('开始处理：' + bookTitle)
     let {content, encoding} = readFileMeta(filePath)
     let bookWordcount = content.replace(/\s/g, '').length
-    let contentArr = content.split('\n')
-    contentArr = contentArr.filter(value => value.trim().length != 0)
+    let contentArr = parseContentArr(content)
 
     let {useTitleWithSignifier, mostIndent} = autoDetermineSignifierUsing(contentArr)
     let chapterArr: IChapter[]
