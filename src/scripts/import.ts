@@ -2,18 +2,13 @@ import 'reflect-metadata'
 import {program} from 'commander'
 import {
     db, autoDetermineSignifierUsing,
-    getLineIndent,
     getPoolCreatingPromise,
-    isTitleWithSignifier,
     logger,
     readFileMeta,
     tagsToArray, buildChapterArr, parseContentArr
 } from "../includes"
 import * as fs from "fs"
-import chardet from 'chardet'
-import iconv from 'iconv-lite'
 import * as path from "path"
-import {appConfig} from "../config"
 import {Container} from "typedi"
 import {TagModel} from "../models/tag-model"
 import {NovelModel} from "../models/novel-model"
@@ -38,11 +33,14 @@ logger.debug(options)
 
 let tagModel = Container.get(TagModel)
 let novelModel = Container.get(NovelModel)
+let novelTitles: string[]
 
 async function script() {
     await getPoolCreatingPromise()
+    novelTitles = await novelModel.getAllNovelTitles()
     if (!fs.existsSync(options.file)) {
         logger.debug('文件或文件夹不存在')
+        db.end()
         return
     }
     if (fs.statSync(options.file).isFile()) {
@@ -79,12 +77,10 @@ script()
 
 async function importFromFile(filePath: string) {
     let bookTitle = path.parse(filePath).name
-    let novelIdOrNull = await novelModel.findNovelByTitle(bookTitle)
-    if (novelIdOrNull && !options.overwrite) {
-        // logger.debug('跳过：' + bookTitle)
-        // logger.debug('------')
+    if (novelTitles.includes(bookTitle) && !options.overwrite) {
         return
     }
+    let novelIdOrNull = await novelModel.findNovelIdByTitle(bookTitle)
     logger.debug('开始处理：' + bookTitle)
     let {content, encoding} = readFileMeta(filePath)
     let bookWordcount = content.replace(/\s/g, '').length
@@ -113,6 +109,7 @@ async function importFromFile(filePath: string) {
     }
 
     await novelModel.insertNovelWithChapters(novel, tagArr, chapterArr)
+    novelTitles.push(bookTitle)
     logger.debug('---------')
 }
 

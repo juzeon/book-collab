@@ -46,7 +46,7 @@ export class NovelModel {
 
     // select n.id,n.title,count(c.id) as count from novels n left join chapters c on n.id=c.novelId group by c.novelId limit 10
     // 获取每本小说的章节数
-    async findNovelByTitle(title: string): Promise<number | null> {
+    async findNovelIdByTitle(title: string): Promise<number | null> {
         return (await db.query('select id from novels where title=?', [title]))?.[0]?.id || null
     }
 
@@ -75,6 +75,11 @@ export class NovelModel {
     async getBulkNovels() {
         let novels = await db.query(getNovelsWithTagsSqlSegment({withoutIntro: true}))
         return novels.map((novel: any) => fillINovel(novel))
+    }
+
+    async getAllNovelTitles(): Promise<string[]> {
+        let novels = await db.query('select title from novels')
+        return novels.map((novel: any) => novel.title)
     }
 
     async findNovelsByTagIdsKeywords(tagIdArr: number[], keywordArr: string[], page: number): Promise<INovel> {
